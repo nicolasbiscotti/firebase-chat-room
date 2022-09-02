@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# yarn 
+.yarn
+.yarnrc.yml
+
 
 dist
 dist-ssr
@@ -33,12 +37,8 @@ dist-ssr
 /build
 
 # misc
-
 .env
 
 
 
 
-# yarn 
-.yarn
-.yarnrc.yml
