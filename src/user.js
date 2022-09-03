@@ -2,27 +2,27 @@ import { createAction, createReducer, configureStore } from "@reduxjs/toolkit";
 import {
   getProfilePicUrl,
   getUserName,
-  isUserSignIn,
   signIn,
   signOutUser,
 } from "./firebaseService";
 
-export const onSignInUser = createAction("user/ sign-in user");
-export const onSignOutUser = createAction("user/ sign-out user");
-const setUser = createAction("user/ set user");
+export const onSignInUser = createAction("user/sign-in user");
+export const onSignOutUser = createAction("user/sign-out user");
+const setUser = createAction("user/set user");
 
 const sigInUserMiddleware = () => (next) => (action) => {
   next(action);
 
   if (onSignInUser.match(action)) {
-    signIn().then(() =>
-      next(
-        setUser({
-          userName: getUserName(),
-          profilePicURL: getProfilePicUrl(),
-        })
-      )
-    );
+    const getUser = () => ({
+      userName: getUserName(),
+      profilePicURL: getProfilePicUrl(),
+    });
+    if (action.payload) {
+      next(setUser(getUser()));
+    } else {
+      signIn().then(() => next(setUser(getUser())));
+    }
   }
 };
 
@@ -40,14 +40,12 @@ const initialState = () => {
     userName: null,
     profilePicURL: null,
   };
-  if (isUserSignIn()) {
-    user.userName = getUserName();
-    user.profilePicURL = getProfilePicUrl();
-  }
   return user;
 };
 
-const userReducer = createReducer(initialState, (builder) => {
+export const selectUser = (state) => state.user;
+
+export const userReducer = createReducer(initialState, (builder) => {
   builder
     .addCase(setUser, (state, { payload }) => ({
       ...state,
@@ -57,7 +55,4 @@ const userReducer = createReducer(initialState, (builder) => {
     .addDefaultCase((state) => state);
 });
 
-export const store = configureStore({
-  reducer: userReducer,
-  middleware: [sigInUserMiddleware, signOutUserMiddleware],
-});
+export const userMiddlewares = [sigInUserMiddleware, signOutUserMiddleware];

@@ -1,12 +1,27 @@
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { onSignInUser, onSignOutUser } from "./user";
+import { onSaveMessage } from "./chat";
+import { subscribeAuthListener } from "./firebaseService";
+import { onSignInUser, onSignOutUser, selectUser } from "./user";
 
 function App() {
-  const user = useSelector((state) => state);
+  const [messageText, setMessageText] = useState("");
+  const user = useSelector(selectUser);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    const unsubscribeAuthListener = subscribeAuthListener((user) => {
+      if (user) dispatch(onSignInUser(user));
+    });
+    return () => unsubscribeAuthListener();
+  }, []);
 
   const onSignIn = () => dispatch(onSignInUser());
   const onSignOut = () => dispatch(onSignOutUser());
+  const onSubmitMessage = (e) => {
+    e.preventDefault();
+    dispatch(onSaveMessage(messageText));
+  };
 
   console.log(user);
   return (
@@ -16,6 +31,23 @@ function App() {
       ) : (
         <ShowSignIn onSignIn={onSignIn} />
       )}
+      <div>
+        <form onSubmit={onSubmitMessage}>
+          <label>
+            Message...
+            <input
+              type="text"
+              id="message"
+              autoComplete="off"
+              onChange={(e) => setMessageText(e.target.value)}
+            />
+          </label>
+
+          <button id="submit" type="submit">
+            Send
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
