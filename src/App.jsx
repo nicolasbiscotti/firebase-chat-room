@@ -1,19 +1,36 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { onSaveMessage } from "./chat";
-import { subscribeAuthListener } from "./firebaseService";
+import { onRecentMessagesChange, onSaveMessage, selectChat } from "./chat";
+import {
+  subscribeAuthListener,
+  susbscribeMessagesListener,
+} from "./firebaseService";
 import { onSignInUser, onSignOutUser, selectUser } from "./user";
 
 function App() {
   const [messageText, setMessageText] = useState("");
   const user = useSelector(selectUser);
+  const feed = useSelector(selectChat);
   const dispatch = useDispatch();
 
   useEffect(() => {
+    //console.log("App was mounted");
+
     const unsubscribeAuthListener = subscribeAuthListener((user) => {
       if (user) dispatch(onSignInUser(user));
     });
-    return () => unsubscribeAuthListener();
+
+    const unsubscribeMessagesChange = susbscribeMessagesListener(
+      ({ newMessage, deletedMessage }) => {
+        dispatch(onRecentMessagesChange({ newMessage, deletedMessage }));
+      }
+    );
+
+    return () => {
+      unsubscribeAuthListener();
+      unsubscribeMessagesChange();
+      //console.log("App was unmounted");
+    };
   }, []);
 
   const onSignIn = () => dispatch(onSignInUser());
@@ -23,7 +40,7 @@ function App() {
     dispatch(onSaveMessage(messageText));
   };
 
-  console.log(user);
+  //console.log("App render: ", user);
   return (
     <div>
       {user.userName ? (
@@ -31,6 +48,19 @@ function App() {
       ) : (
         <ShowSignIn onSignIn={onSignIn} />
       )}
+      <div>
+        {user.userName && (
+          <ul>
+            {feed.map((msg) => (
+              <li key={msg.id}>
+                <img src={msg.profilePicUrl} alt="user profile picture" />
+                <h4>{msg.name}</h4>
+                <p>{msg.text}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <div>
         <form onSubmit={onSubmitMessage}>
           <label>

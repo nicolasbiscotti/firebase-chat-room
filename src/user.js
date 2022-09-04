@@ -6,10 +6,12 @@ import {
   signOutUser,
 } from "./firebaseService";
 
+// actions
+const setUser = createAction("user/set user");
 export const onSignInUser = createAction("user/sign-in user");
 export const onSignOutUser = createAction("user/sign-out user");
-const setUser = createAction("user/set user");
 
+// middlewares
 const sigInUserMiddleware = () => (next) => (action) => {
   next(action);
 
@@ -35,6 +37,11 @@ const signOutUserMiddleware = () => (next) => (action) => {
   }
 };
 
+// selectors
+export const selectUser = (state) => state.user;
+
+
+// reducer
 const initialState = () => {
   const user = {
     userName: null,
@@ -42,8 +49,6 @@ const initialState = () => {
   };
   return user;
 };
-
-export const selectUser = (state) => state.user;
 
 export const userReducer = createReducer(initialState, (builder) => {
   builder
