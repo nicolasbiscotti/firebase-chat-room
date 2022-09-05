@@ -1,20 +1,46 @@
 import { createAction, createReducer } from "@reduxjs/toolkit";
-import { isUserSignIn, saveMessage } from "./firebaseService";
+import {
+  isUserSignIn,
+  saveMessage,
+  susbscribeMessagesListener,
+} from "./firebaseService";
 
 // actions
+const clearFeed = createAction("chat/clear the feed");
 const addNewMessage = createAction("chat/add new message");
 const deleteMessage = createAction("chat/delete message");
-export const onSaveMessage = createAction("chat/save message flow");
-export const onRecentMessagesChange = createAction(
-  "chat/recent message change"
+const onRecentMessagesChange = createAction("chat/recent message change");
+
+export const subscribeToTheFeed = createAction("chat/subscribe to the feed");
+export const unsubscribeToTheFeed = createAction(
+  "chat/unsubscribe to the feed"
 );
+export const onSendMessage = createAction("chat/save message flow");
+
+let unsubscribeMessagesListener;
 
 // middlewares
-const saveMessageMiddleware = () => (next) => (action) => {
+const handleSubscription =
+  ({ dispatch }) =>
+  (next) =>
+  (action) => {
+    next(action);
+
+    if (subscribeToTheFeed.match(action)) {
+      unsubscribeMessagesListener = susbscribeMessagesListener(
+        ({ newMessage, deletedMessage }) =>
+          dispatch(onRecentMessagesChange({ newMessage, deletedMessage }))
+      );
+    }
+    if (unsubscribeToTheFeed.match(action)) {
+      unsubscribeMessagesListener();
+      next(clearFeed());
+    }
+  };
+const handleSendMessage = () => (next) => (action) => {
   next(action);
 
-  if (onSaveMessage.match(action)) {
-    console.log("user signIn? -> ", isUserSignIn());
+  if (onSendMessage.match(action)) {
     if (action.payload && isUserSignIn()) {
       saveMessage(action.payload);
     } else {
@@ -26,13 +52,14 @@ const handleRecentMessageChange = () => (next) => (action) => {
   next(action);
 
   if (onRecentMessagesChange.match(action)) {
-    const { newMessage, deletedMessage } = action.payload;
-    if (newMessage) {
-      console.log("new message");
-      next(addNewMessage(newMessage));
-    }
-    if (deletedMessage) {
-      next(deleteMessage(deletedMessage));
+    if (isUserSignIn()) {
+      const { newMessage, deletedMessage } = action.payload;
+      if (newMessage) {
+        next(addNewMessage(newMessage));
+      }
+      if (deletedMessage) {
+        next(deleteMessage(deletedMessage));
+      }
     }
   }
 };
@@ -40,7 +67,7 @@ const handleRecentMessageChange = () => (next) => (action) => {
 // selectors
 export const selectChat = (state) => state.chat;
 
-// reducer
+// initial state and reducer
 const initialState = [];
 
 export const chatReducer = createReducer(initialState, (builder) => {
@@ -49,10 +76,12 @@ export const chatReducer = createReducer(initialState, (builder) => {
     .addCase(deleteMessage, (state, { payload }) =>
       state.filter((msg) => msg.id !== payload.id).map((msg) => ({ ...msg }))
     )
+    .addCase(clearFeed, () => [])
     .addDefaultCase((state) => state);
 });
 
 export const chatMiddlewares = [
-  saveMessageMiddleware,
+  handleSendMessage,
   handleRecentMessageChange,
+  handleSubscription,
 ];

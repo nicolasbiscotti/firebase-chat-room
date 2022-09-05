@@ -1,7 +1,8 @@
-import { createAction, createReducer, configureStore } from "@reduxjs/toolkit";
+import { createAction, createReducer } from "@reduxjs/toolkit";
 import {
   getProfilePicUrl,
   getUserName,
+  isUserSignIn,
   signIn,
   signOutUser,
 } from "./firebaseService";
@@ -10,38 +11,45 @@ import {
 const setUser = createAction("user/set user");
 export const onSignInUser = createAction("user/sign-in user");
 export const onSignOutUser = createAction("user/sign-out user");
+export const onAuthStateChange = createAction("user/auth state change");
 
 // middlewares
-const sigInUserMiddleware = () => (next) => (action) => {
+const handleSignInUser = () => (next) => (action) => {
   next(action);
 
   if (onSignInUser.match(action)) {
-    const getUser = () => ({
-      userName: getUserName(),
-      profilePicURL: getProfilePicUrl(),
-    });
-    if (action.payload) {
-      next(setUser(getUser()));
-    } else {
-      signIn().then(() => next(setUser(getUser())));
-    }
+    signIn();
   }
 };
 
-const signOutUserMiddleware = () => (next) => (action) => {
+const handleSignOutUser = () => (next) => (action) => {
   next(action);
 
   if (onSignOutUser.match(action)) {
     signOutUser();
-    next(setUser({ userName: null, profilePicURL: null }));
+  }
+};
+
+const handleAuthStateChanged = () => (next) => (action) => {
+  next(action);
+
+  if (onAuthStateChange.match(action)) {
+    const user = {
+      userName: null,
+      profilePicURL: null,
+    };
+    if (isUserSignIn()) {
+      user.userName = getUserName();
+      user.profilePicURL = getProfilePicUrl();
+    }
+    next(setUser(user));
   }
 };
 
 // selectors
 export const selectUser = (state) => state.user;
 
-
-// reducer
+// initial state and reducer
 const initialState = () => {
   const user = {
     userName: null,
@@ -60,4 +68,8 @@ export const userReducer = createReducer(initialState, (builder) => {
     .addDefaultCase((state) => state);
 });
 
-export const userMiddlewares = [sigInUserMiddleware, signOutUserMiddleware];
+export const userMiddlewares = [
+  handleSignInUser,
+  handleSignOutUser,
+  handleAuthStateChanged,
+];

@@ -18,15 +18,16 @@ import {
 import { initializeApp } from "firebase/app";
 import { getFirebaseConfig } from "./firebase-config";
 
+// initialize the firebase app
 const firebaseAppConfig = getFirebaseConfig();
 initializeApp(firebaseAppConfig);
 
+// auth functions
 export async function signIn() {
   const provider = new GoogleAuthProvider();
   return await signInWithPopup(getAuth(), provider);
 }
 
-// helpers functions
 export function signOutUser() {
   signOut(getAuth());
 }
@@ -41,6 +42,11 @@ export function getUserName() {
 export function isUserSignIn() {
   return !!getAuth().currentUser;
 }
+
+export function subscribeAuthListener(authListener) {
+  return onAuthStateChanged(getAuth(), authListener);
+}
+
 // Adds a size to Google Profile pics URLs.
 function addSizeToGoogleProfilePic(url) {
   if (url.indexOf("googleusercontent.com") !== -1 && url.indexOf("?") === -1) {
@@ -54,16 +60,12 @@ const getMessagesCollection = () => collection(getFirestore(), "messages");
 
 // writers
 export async function saveMessage(messageText) {
-  try {
-    await addDoc(getMessagesCollection(), {
-      name: getUserName(),
-      text: messageText,
-      profilePicUrl: getProfilePicUrl(),
-      timestamp: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error("Error writing new message to Firebase Database.", error);
-  }
+  return await addDoc(getMessagesCollection(), {
+    name: getUserName(),
+    text: messageText,
+    profilePicUrl: getProfilePicUrl(),
+    timestamp: serverTimestamp(),
+  });
 }
 
 // listeners susbscription
@@ -73,7 +75,6 @@ export function susbscribeMessagesListener(messageListener) {
     orderBy("timestamp", "asc"),
     limit(12)
   );
-
   return onSnapshot(recentMessagesQuery, (snapshot) => {
     const updates = {};
     snapshot.docChanges().forEach((change) => {
@@ -89,8 +90,4 @@ export function susbscribeMessagesListener(messageListener) {
       }
     });
   });
-}
-
-export function subscribeAuthListener(authListener) {
-  return onAuthStateChanged(getAuth(), authListener);
 }

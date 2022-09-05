@@ -1,35 +1,31 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { onRecentMessagesChange, onSaveMessage, selectChat } from "./chat";
 import {
-  subscribeAuthListener,
-  susbscribeMessagesListener,
-} from "./firebaseService";
-import { onSignInUser, onSignOutUser, selectUser } from "./user";
+  onSendMessage,
+  selectChat,
+  subscribeToTheFeed,
+  unsubscribeToTheFeed,
+} from "./chat";
+import { subscribeAuthListener } from "./firebaseService";
+import {
+  onAuthStateChange,
+  onSignInUser,
+  onSignOutUser,
+  selectUser,
+} from "./user";
 
 function App() {
   const [messageText, setMessageText] = useState("");
   const user = useSelector(selectUser);
-  const feed = useSelector(selectChat);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    //console.log("App was mounted");
-
-    const unsubscribeAuthListener = subscribeAuthListener((user) => {
-      if (user) dispatch(onSignInUser(user));
-    });
-
-    const unsubscribeMessagesChange = susbscribeMessagesListener(
-      ({ newMessage, deletedMessage }) => {
-        dispatch(onRecentMessagesChange({ newMessage, deletedMessage }));
-      }
+    const unsubscribeAuthListener = subscribeAuthListener(() =>
+      dispatch(onAuthStateChange())
     );
 
     return () => {
       unsubscribeAuthListener();
-      unsubscribeMessagesChange();
-      //console.log("App was unmounted");
     };
   }, []);
 
@@ -37,7 +33,7 @@ function App() {
   const onSignOut = () => dispatch(onSignOutUser());
   const onSubmitMessage = (e) => {
     e.preventDefault();
-    dispatch(onSaveMessage(messageText));
+    dispatch(onSendMessage(messageText));
   };
 
   //console.log("App render: ", user);
@@ -48,19 +44,9 @@ function App() {
       ) : (
         <ShowSignIn onSignIn={onSignIn} />
       )}
-      <div>
-        {user.userName && (
-          <ul>
-            {feed.map((msg) => (
-              <li key={msg.id}>
-                <img src={msg.profilePicUrl} alt="user profile picture" />
-                <h4>{msg.name}</h4>
-                <p>{msg.text}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+
+      <div>{user.userName && <Feed />}</div>
+
       <div>
         <form onSubmit={onSubmitMessage}>
           <label>
@@ -97,6 +83,28 @@ function ShowSignIn({ onSignIn }) {
     <div>
       <button onClick={onSignIn}>SignIn with Google</button>
     </div>
+  );
+}
+
+function Feed() {
+  const feed = useSelector(selectChat);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(subscribeToTheFeed());
+    return () => dispatch(unsubscribeToTheFeed());
+  }, []);
+
+  return (
+    <ul>
+      {feed.map((msg) => (
+        <li key={msg.id}>
+          <img src={msg.profilePicUrl} alt="user profile picture" />
+          <h6>{msg.name}</h6>
+          <p>{msg.text}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
