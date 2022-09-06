@@ -5,15 +5,47 @@ import {
   isUserSignIn,
   signIn,
   signOutUser,
+  subscribeAuthListener,
 } from "./firebaseService";
+
+const auth = (function () {
+  let unsubscribeAuthListener;
+
+  function startAuth(authListener) {
+    unsubscribeAuthListener = subscribeAuthListener(authListener);
+  }
+
+  function endAuth() {
+    unsubscribeAuthListener();
+  }
+
+  return {
+    startAuth,
+    endAuth,
+  };
+})();
 
 // actions
 const setUser = createAction("user/set user");
+const onAuthStateChange = createAction("user/auth state change");
+
+export const onStartAuth = createAction("user/start authentication");
+export const onEndAuth = createAction("user/end authentication");
 export const onSignInUser = createAction("user/sign-in user");
 export const onSignOutUser = createAction("user/sign-out user");
-export const onAuthStateChange = createAction("user/auth state change");
 
 // middlewares
+const handleAuth = ({ dispatch }) => (next) => (action) => {
+  next(action);
+
+  if (onStartAuth.match(action)) {
+    auth.startAuth(() => dispatch(onAuthStateChange()));
+  }
+  if (onEndAuth.match(action)) {
+    auth.endAuth();
+  }
+};
+
 const handleSignInUser = () => (next) => (action) => {
   next(action);
 
@@ -69,6 +101,7 @@ export const userReducer = createReducer(initialState, (builder) => {
 });
 
 export const userMiddlewares = [
+  handleAuth,
   handleSignInUser,
   handleSignOutUser,
   handleAuthStateChanged,

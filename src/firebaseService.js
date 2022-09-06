@@ -72,7 +72,7 @@ export async function saveMessage(messageText) {
 export function susbscribeMessagesListener(messageListener) {
   const recentMessagesQuery = query(
     getMessagesCollection(),
-    orderBy("timestamp", "asc"),
+    orderBy("timestamp", "desc"),
     limit(12)
   );
   return onSnapshot(recentMessagesQuery, (snapshot) => {

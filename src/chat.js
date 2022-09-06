@@ -5,6 +5,23 @@ import {
   susbscribeMessagesListener,
 } from "./firebaseService";
 
+const lastMessages = (function () {
+  let unsubscribeMessagesListener;
+
+  function subscribe(listener) {
+    unsubscribeMessagesListener = susbscribeMessagesListener(listener);
+  }
+
+  function unsubscribe() {
+    unsubscribeMessagesListener();
+  }
+
+  return {
+    subscribe,
+    unsubscribe,
+  };
+})();
+
 // actions
 const clearFeed = createAction("chat/clear the feed");
 const addNewMessage = createAction("chat/add new message");
@@ -17,26 +34,21 @@ export const unsubscribeToTheFeed = createAction(
 );
 export const onSendMessage = createAction("chat/save message flow");
 
-let unsubscribeMessagesListener;
-
 // middlewares
-const handleSubscription =
-  ({ dispatch }) =>
-  (next) =>
-  (action) => {
-    next(action);
+const handleSubscription = ({ dispatch }) => (next) => (action) => {
+  next(action);
 
-    if (subscribeToTheFeed.match(action)) {
-      unsubscribeMessagesListener = susbscribeMessagesListener(
-        ({ newMessage, deletedMessage }) =>
-          dispatch(onRecentMessagesChange({ newMessage, deletedMessage }))
-      );
-    }
-    if (unsubscribeToTheFeed.match(action)) {
-      unsubscribeMessagesListener();
-      next(clearFeed());
-    }
-  };
+  if (subscribeToTheFeed.match(action)) {
+    lastMessages.subscribe(({ newMessage, deletedMessage }) =>
+      dispatch(onRecentMessagesChange({ newMessage, deletedMessage }))
+    );
+  }
+  if (unsubscribeToTheFeed.match(action)) {
+    lastMessages.unsubscribe();
+    next(clearFeed());
+  }
+};
+
 const handleSendMessage = () => (next) => (action) => {
   next(action);
 
@@ -48,6 +60,7 @@ const handleSendMessage = () => (next) => (action) => {
     }
   }
 };
+
 const handleRecentMessageChange = () => (next) => (action) => {
   next(action);
 

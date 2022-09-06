@@ -6,9 +6,9 @@ import {
   subscribeToTheFeed,
   unsubscribeToTheFeed,
 } from "./chat";
-import { subscribeAuthListener } from "./firebaseService";
 import {
-  onAuthStateChange,
+  onStartAuth,
+  onEndAuth,
   onSignInUser,
   onSignOutUser,
   selectUser,
@@ -20,12 +20,10 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const unsubscribeAuthListener = subscribeAuthListener(() =>
-      dispatch(onAuthStateChange())
-    );
+    dispatch(onStartAuth());
 
     return () => {
-      unsubscribeAuthListener();
+      dispatch(onEndAuth());
     };
   }, []);
 
@@ -92,7 +90,10 @@ function Feed() {
 
   useEffect(() => {
     dispatch(subscribeToTheFeed());
-    return () => dispatch(unsubscribeToTheFeed());
+
+    return () => {
+      dispatch(unsubscribeToTheFeed());
+    };
   }, []);
 
   return (
